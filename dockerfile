@@ -2,7 +2,7 @@
 FROM golang:alpine
 
 # Add Maintainer info
-LABEL maintainer="Agus Wibawantara"
+LABEL maintainer="vit"
 
 # Install git.
 # Git is required for fetching the dependencies.

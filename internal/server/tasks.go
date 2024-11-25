@@ -12,10 +12,12 @@ import (
 	"github.com/gorilla/mux"
 	"gitlab.com/vitbog/titov-rest/internal/db"
 	"gitlab.com/vitbog/titov-rest/internal/filters"
+	"gitlab.com/vitbog/titov-rest/internal/token"
 )
 
 type TaskModelService struct {
 	Id          int64     `json:"id" db:"id"`
+	IdUser      int64     `json:"id_user" db:"id_user"`
 	Title       string    `json:"title" db:"title"`
 	Description string    `json:"description" db:"description"`
 	Status      string    `json:"status" db:"status"`
@@ -27,6 +29,7 @@ type TaskModelService struct {
 func (s *Server) TaskModelServiceConvertFromModel(t db.TaskModel) (TaskModelService, error) {
 	return TaskModelService{
 		Id:          t.Id,
+		IdUser:      t.IdUser,
 		Title:       t.Title,
 		Description: t.Description,
 		Status:      string(t.Status),
@@ -66,7 +69,16 @@ func (s *Server) HandlerTasksCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = s.Db.TasksCreate(task.Title, task.Description, task.Status, task.DueDate)
+	tok := r.Header.Get("Authorization")
+	userLoginInterface, err := token.Field("login", tok, s.JWTSecretKey)
+	userLogin, ok := userLoginInterface.(string)
+	if !ok {
+		log.Printf("Error: %s", "bad login in token")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	_, err = s.Db.TasksCreate(userLogin, task.Title, task.Description, task.Status, task.DueDate)
 	if err != nil {
 		log.Printf("Error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)

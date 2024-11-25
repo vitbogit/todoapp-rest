@@ -1,4 +1,5 @@
 CREATE OR REPLACE FUNCTION tasks.tasks_create(
+    _userlogin text,
     _title text,
     _description text,
     _status text,
@@ -8,10 +9,18 @@ returns bigint
 language plpgsql
 as
 $$
+    DECLARE _id_user bigint;
     DECLARE id_task bigint;
 begin
-    insert into tasks.tasks (title, description, status, created_at, due_date, updated_at) 
-        values (_title, _description, _status::task_status, NOW(), _due_date, NOW()) 
+
+    select u.id from users.users u where u.login=_userlogin into _id_user;
+
+    if _id_user is null then 
+        raise exception 'not found user with given login';
+    end if;
+
+    insert into tasks.tasks (id_user, title, description, status, created_at, due_date, updated_at) 
+        values (_id_user, _title, _description, _status::task_status, NOW(), _due_date, NOW()) 
         returning id into id_task;
     
     return id_task;
@@ -21,6 +30,7 @@ $$;
 CREATE OR REPLACE FUNCTION tasks.tasks_list()
 returns table (
     id bigint,
+    id_user bigint,
     title text,
     description text,
     status text,
@@ -33,7 +43,7 @@ as
 $$
 begin
     return query
-        SELECT t.id, t.title, t.description, t.status::text, t.created_at, t.due_date, t.updated_at from tasks.tasks t;
+        SELECT t.id, t.id_user, t.title, t.description, t.status::text, t.created_at, t.due_date, t.updated_at from tasks.tasks t;
 end;
 $$;
 

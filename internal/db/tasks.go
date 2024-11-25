@@ -25,6 +25,7 @@ func TaskStatusIsValid(candidate string) bool {
 
 type TaskModel struct {
 	Id          int64      `json:"id" db:"id"`
+	IdUser      int64      `json:"id_user" db:"id_user"`
 	Title       string     `json:"title" db:"title"`
 	Description string     `json:"description" db:"description"`
 	Status      TaskStatus `json:"status" db:"status"`
@@ -35,6 +36,7 @@ type TaskModel struct {
 
 type TaskDb struct {
 	Id          int64          `json:"id" db:"id"`
+	IdUser      int64          `json:"id_user" db:"id_user"`
 	Title       sql.NullString `json:"title" db:"title"`
 	Description sql.NullString `json:"description" db:"description"`
 	Status      sql.NullString `json:"status" db:"status"`
@@ -51,6 +53,7 @@ func (db *Db) TaskConvertFromDb(t TaskDb) (TaskModel, error) {
 
 	return TaskModel{
 		Id:          t.Id,
+		IdUser:      t.IdUser,
 		Title:       t.Title.String,
 		Description: t.Description.String,
 		Status:      TaskStatus(t.Status.String),
@@ -75,15 +78,15 @@ func (db *Db) TasksConvertFromDb(tasks []TaskDb) ([]TaskModel, error) {
 }
 
 var (
-	glTasksAllowedColumns = []string{"id", "title", "description", "status", "created_at", "updated_at", "due_date", "updated_at"}
+	glTasksAllowedColumns = []string{"id", "id_user", "title", "description", "status", "created_at", "updated_at", "due_date", "updated_at"}
 )
 
-func (db *Db) TasksCreate(taskTitle, taskDescription, taskStatus string, DueDate time.Time) (int64, error) {
+func (db *Db) TasksCreate(userLogin, taskTitle, taskDescription, taskStatus string, DueDate time.Time) (int64, error) {
 	schema := "tasks"
-	query := fmt.Sprintf("SELECT %s.tasks_create($1, $2, $3, $4)", schema)
+	query := fmt.Sprintf("SELECT %s.tasks_create($1, $2, $3, $4, $5)", schema)
 	var taskId int64
 
-	err := db.Pg.Get(&taskId, query, taskTitle, taskDescription, taskStatus, DueDate)
+	err := db.Pg.Get(&taskId, query, userLogin, taskTitle, taskDescription, taskStatus, DueDate)
 	if err != nil {
 		return 0, err
 	}
@@ -93,9 +96,9 @@ func (db *Db) TasksCreate(taskTitle, taskDescription, taskStatus string, DueDate
 
 func (db *Db) Tasks(filt filters.Filtering) ([]TaskModel, error) {
 	schema := "tasks"
-	query := fmt.Sprintf("SELECT t.id, t.title, t.description, t.status, t.created_at, t.due_date, t.updated_at from %s.tasks_list() t", schema)
+	query := fmt.Sprintf("SELECT t.id, t.id_user, t.title, t.description, t.status, t.created_at, t.due_date, t.updated_at from %s.tasks_list() t", schema)
 
-	filterQuery, args, err := filt.Filter(query, 0, glTasksAllowedColumns, "id", "title", "description", "status", "created_at", "updated_at", "due_date", "updated_at")
+	filterQuery, args, err := filt.Filter(query, 0, glTasksAllowedColumns, "id", "id_user", "title", "description", "status", "created_at", "updated_at", "due_date", "updated_at")
 	if err != nil {
 		return nil, fmt.Errorf("error filtering: %v", err)
 	}
